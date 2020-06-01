@@ -1,0 +1,5 @@
+gym
+tqdm
+torch
+tensorboard
+sphinxcontrib-bibtex
