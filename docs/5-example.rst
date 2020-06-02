@@ -123,7 +123,6 @@
 结果如 `图 5.1`_ 所示。
 
 .. figure:: /_static/images/tfb.png
-   :scale: 100%
    :name: fig-tfb
    :align: center
 

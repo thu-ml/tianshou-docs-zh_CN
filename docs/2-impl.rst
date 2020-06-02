@@ -28,7 +28,6 @@
 ~~~~~~~~
 
 .. figure:: /_static/images/rl-zh.png
-   :scale: 100%
    :name: fig-rlprob
    :align: center
 
@@ -154,7 +153,6 @@ learning）。同策略学习指所有与环境交互采样出来的轨迹立即
 #. 训练器（Trainer）：训练器是平台最上层的封装，定义了整个训练过程，与采集器和策略的学习函数进行交互，包含同策略学习与异策略学习两种训练模式。
 
 .. figure:: /_static/images/frame-zh.png
-   :scale: 100%
    :name: fig-abstract
    :align: center
 
@@ -353,7 +351,6 @@ Buffer）支持优先权重采样。此外数据缓冲区还支持历史数据�
 展示了天授平台的标志，左侧采用渐变颜色融合了青铜文明元素，是一个大写的字母“T”，右侧是天授拼音。
 
 .. figure:: /_static/images/tianshou-logo.png
-   :scale: 50%
    :name: fig-logo
    :align: center
 
@@ -368,7 +365,6 @@ Buffer）支持优先权重采样。此外数据缓冲区还支持历史数据�
 https://tianshou.readthedocs.io/ 中，预览页面如 `图 2.4`_ 所示。
 
 .. figure:: /_static/images/rtd.png
-   :scale: 70%
    :name: fig-rtd
    :align: center
 
@@ -387,7 +383,6 @@ https://codecov.io/gh/thu-ml/tianshou 中查看详细情况。`图 2.5`_
 展示了天授某次单元测试的具体结果。
 
 .. figure:: /_static/images/codecov.png
-   :scale: 90%
    :name: fig-codecov
    :align: center
 
@@ -408,7 +403,6 @@ https://codecov.io/gh/thu-ml/tianshou 中查看详细情况。`图 2.5`_
 显示了天授在PyPI平台的发布界面。在未来，天授平台还将会添加另一个第三方软件存储库Conda [4]_ 的发布渠道。
 
 .. figure:: /_static/images/pypi.png
-   :scale: 90%
    :name: fig-pypi
    :align: center
 

@@ -22,7 +22,7 @@
 以GitHub星标数量大于约一千为标准，现有使用较为广泛的深度强化学习平台有OpenAI的Baselines :cite:`baselines`、SpinningUp :cite:`spinningup`，加州伯克利大学的开源分布式强化学习框架RLlib :cite:`rllib`、rlpyt :cite:`rlpyt`、rlkit :cite:`rlkit`、Garage :cite:`garage`，谷歌公司的Dopamine :cite:`dopamine`、B-suite :cite:`bsuite`，以及其他独立开发的平台Stable-Baselines :cite:`stable-baselines`、keras-rl :cite:`keras-rl`、PyTorch-DRL :cite:`pytorch-drl`、TensorForce :cite:`tensorforce`。`图 1.1`_ 展示了若干主流强化学习算法平台的标志，`表 1.1`_ 列举了各个框架的基本信息。
 
 .. figure:: /_static/images/exist_framework.png
-   :scale: 30%
+   :width: 400px
    :name: fig-exist
    :align: center
 
@@ -179,7 +179,6 @@ PyTorch :cite:`pytorch` 是Facebook公司推出的一款开源深度学习框架
 ~~~~~~~~
 
 .. figure:: /_static/images/intro.png
-   :scale: 100%
    :name: fig-framework
    :align: center
 

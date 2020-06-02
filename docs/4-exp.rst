@@ -513,7 +513,6 @@ Gym环境中的CartPole-v0任务：该任务要求智能体操纵小车，使得
 对该任务进行了可视化展示。
 
 .. figure:: /_static/images/cartpole.png
-   :scale: 50%
    :name: fig-cartpole
    :align: center
 
@@ -582,7 +581,6 @@ Gym环境中的Pendulum-v0任务：该任务要求智能体操控倒立摆，使
 :math:`[-2, 2]`。`图 4.2`_ 对该任务进行了可视化展示。
 
 .. figure:: /_static/images/pendulum.png
-   :scale: 50%
    :name: fig-pendulum
    :align: center
 

@@ -80,7 +80,7 @@ A2C最大的特点就是支持同步的并行采样训练，但由于天授平�
 A2C算法在天授中的实现如下：
 
 -  ``process_fn``：计算
-   :math:`\hat{A}(s_t, a_t)`，具体实现位于章节 :ref:`sec_gae`；
+   :math:`\hat{A}(s_t, a_t)`，具体实现位于 :ref:`sec_gae`；
 
 -  ``forward``：和策略梯度算法一致，给定观测值
    :math:`o_t`，计算输出的输出策略的概率分布，并从中采样；
@@ -116,7 +116,7 @@ PPO算法通过计算更新参数前后两次策略的比值来确保这个限�
 天授中的PPO算法实现大致逻辑与A2C十分类似：
 
 -  ``process_fn``：计算 :math:`\hat{A}(s_t,a_t)` 与
-   :math:`G_t`，具体实现位于章节 :ref:`sec_gae`；
+   :math:`G_t`，具体实现位于 :ref:`sec_gae`；
 
 -  ``forward``：按照给定的观测值 :math:`o_t`
    计算概率分布，并从中采样出动作 :math:`a_t`；
