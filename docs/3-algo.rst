@@ -141,8 +141,8 @@ PPO算法通过计算更新参数前后两次策略的比值来确保这个限�
 :math:`\Psi_t=\sum_{i=t}^\infty r_i`，即累计回报函数；A2C中为
 :math:`\Psi_t=\hat{A}_t=-V(s_t)+r_t+\gamma r_{t+1}+\cdots+\gamma^{T-t+1}r_{T-1}+\gamma^{T-t}V(s_T)`；PPO中是
 :math:`\Psi_t=\hat{A}_t=\delta_t+(\gamma\lambda)\delta_{t+1}+\cdots+(\gamma\lambda)^{T-t+1}\delta_{T-1}`，其中
-:math:`\delta_t` 是时序差分误差项（Temporal Difference error，TD
-error），:math:`\delta_t=r_t+\gamma V(s_{t+1})-V(s_t)`。GAE将上述若干种估计形式进行统一如下：
+:math:`\delta_t` 是时序差分误差项（Temporal Difference Error，TD
+Error），:math:`\delta_t=r_t+\gamma V(s_{t+1})-V(s_t)`。GAE将上述若干种估计形式进行统一如下：
 
 .. math:: \hat{A}_t^{\mathrm{GAE}(\gamma, \lambda)} = \sum_{l=0}^\infty (\gamma\lambda)^l\delta_{t+l}=\sum_{l=0}^\infty (\gamma\lambda)^l(r_t+\gamma V(s_{t+l+1}) - V(s_{t+l}))
    :label: equ-gae
@@ -156,7 +156,7 @@ PG中的估计项即为A2C中 :math:`V(s_t)` 恒为0的特殊情况。
 天授中GAE实现与其他平台有一些不同之处。比如在OpenAI
 Baselines :cite:`baselines` 的实现中，对每个完整轨迹的最后一帧进行特殊判断处理。与此不同，天授使用轨迹中每项的下一时刻观测值
 :math:`o_{t+1}`
-批量计算状态值函数，避免了特殊判断。天授的GAE实现将大部分操作进行向量化，并且支持同时计算多个完整轨迹的GAE函数，还比Baselines正常使用Python写的循环语句要快不少。
+批量计算状态值函数，避免了特殊判断。天授的GAE实现将大部分操作进行向量化，并且支持同时计算多个完整轨迹的GAE函数，比Baselines使用正常Python循环语句的方式显著提高了运行速度。
 
 基于Q价值函数的深度强化学习算法
 -------------------------------
@@ -168,9 +168,9 @@ Baselines :cite:`baselines` 的实现中，对每个完整轨迹的最后一帧�
 
 .. math:: a_t = \arg\max_{a} Q^\pi(s_t, a)
 
-其动作值函数的更新采用贝尔曼方程进行迭代
+其动作值函数的更新采用贝尔曼方程（Bellman Equation）进行迭代
 
-.. math:: Q^\pi(s_t,a_t) \leftarrow Q^\pi(s_t,a_t)+\alpha_t (r_t+\gamma \max_a Q^\pi(s_{t+1}, a) - Q^\pi(s_t,a_t))
+.. math:: Q^\pi(s_t,a_t) \leftarrow Q^\pi(s_t,a_t)+\alpha (r_t+\gamma \max_a Q^\pi(s_{t+1}, a) - Q^\pi(s_t,a_t))
    :label: equ-dqn
 
 其中 :math:`\alpha` 为学习率。通常在简单任务上，使用全连接神经网络来拟合
@@ -279,7 +279,7 @@ DDPG算法假设动作值函数 :math:`Q(s, a)`
 -  截断双网络Q学习：截断双网络Q学习使用两个动作值网络，取二者中的最小值作为动作值函数
    Q 的估计，从而有利于减少过度估计：
 
-   .. math:: Q_{\mathrm{target}_i} = r + \min_{j=1, 2} Q^\pi_{\phi_j}(s^\prime, \pi_{\theta}(s^\prime))
+   .. math:: Q_{\mathrm{target}_i} = r + \min_{j=1, 2} Q^\pi_{\phi_j}(s^\prime, \pi_{\theta}(s^\prime)),~~i=1,2
 
 -  动作网络延迟更新：相关实验结果表明，同步训练动作网络和评价网络，却不使用目标网络，会导致训练过程不稳定；但是仅固定动作网络时，评价网络往往能够收敛到正确的结果。因此TD3算法以较低的频率更新动作网络，较高频率更新评价网络，通常每两次更新评价网络时，进行一次策略更新。
 

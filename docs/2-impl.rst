@@ -12,7 +12,7 @@
 
 -  监督学习：输出预测值 :math:`y`；
 
--  无监督学习：输出隐变量 :math:`z`；
+-  无监督学习：输出 :math:`x` 的潜在模式 :math:`z`，如聚类、密度估计、降维、隐变量推理等；
 
 -  强化学习：输出动作 :math:`a` 使得期望累计奖励 :math:`\mathbb{E}_\pi[\sum r]` 最大。
 
@@ -46,7 +46,7 @@
 
 -  :math:`\mathcal{R}: \mathcal{S}\times \mathcal{A}\rightarrow \mathbb{R}` 是奖励函数，\ :math:`t` 时刻的奖励函数 :math:`r_t` 由 :math:`s_t, a_t` 决定，使用 :math:`R_s^a` 表示在当前状态\ :math:`s`\ 采取动作\ :math:`a`\ 之后所能获得的期望奖励；
 
--  :math:`\mathcal{P}: \mathcal{S}\times \mathcal{A}\times \mathcal{S}\rightarrow \mathbb{R}` 是状态转移概率函数，使用 :math:`P_{ss^\prime}^a\in\mathcal{P}` 来表示当前状态 :math:`s` 采取动作 :math:`a` 转移到状态 :math:`s^\prime` 的概率；
+-  :math:`\mathcal{P}: \mathcal{S}\times \mathcal{A}\times \mathcal{S}\rightarrow \mathbb{R}` 是状态转移概率函数，使用 :math:`P_{ss^\prime}^a` 来表示当前状态 :math:`s` 采取动作 :math:`a` 转移到状态 :math:`s^\prime` 的概率；
 
 -  :math:`\rho_0` 是初始状态的概率分布，\ :math:`\sum_{s\in\mathcal{S}} \rho_0(s)=1`\ 。
 
@@ -76,7 +76,7 @@ Process，POMDP)。在智能体与环境交互的每个回合中，智能体只�
 智能体的组成
 ~~~~~~~~~~~~
 
-一个智能体主要由策略函数（Policy function）、价值函数（Value function）和环境模型（Environment model）三个部分组成。
+一个智能体主要由策略函数（Policy Function）、价值函数（Value Function）和环境模型（Environment Model）三个部分组成。
 
 **策略函数：** 智能体根据当前环境状态，输出动作值的函数。策略函数分为确定性策略函数与随机性策略函数。
 
@@ -89,20 +89,20 @@ Process，POMDP)。在智能体与环境交互的每个回合中，智能体只�
 
 **价值函数：** 价值函数是智能体对当前状态、或者是状态-动作对进行评估的函数，主要有三种形式：
 
-#. 状态值函数（State-Value function） :math:`V(s)`：状态 :math:`s`
+#. 状态值函数（State-Value Function） :math:`V(s)`：状态 :math:`s`
    对应的期望累计折扣回报，:math:`V(s)=\mathbb{E}_\pi[G_t|s_t=s]`；
 
-#. 动作值函数（Action-Value function） :math:`Q(s,a)`：状态 :math:`s`
+#. 动作值函数（Action-Value Function） :math:`Q(s,a)`：状态 :math:`s`
    在采取动作 :math:`a`
    的时候对应的期望累计折扣回报，:math:`Q(s,a)=\mathbb{E}_{\pi}[G_t|s_t=s,a_t=a]`
 
-#. 优势函数（Advantage function） :math:`A(s,a)`：状态 :math:`s`
+#. 优势函数（Advantage Function） :math:`A(s,a)`：状态 :math:`s`
    下采取动作 :math:`a`
    的情况下，比平均情况要好多少，:math:`A(s,a)=Q(s,a)-V(s)`。
 
 **环境模型：** 智能体还可以对环境中的状态转移函数进行建模，比如使用映射
 :math:`\mathcal{F}: \mathcal{S}\times \mathcal{A}\rightarrow\mathcal{S}`
-进行对环境转移概率函数 :math:`P_{ss^\prime}^a` 的拟合，或者是对奖励函数 :math:`R_s^a` 的分布进行拟合。
+进行对环境转移 :math:`\max_{s^\prime} P_{ss^\prime}^a` 的拟合，或者是对奖励函数 :math:`R_s^a` 的分布进行拟合。
 
 现有深度强化学习算法分类
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,8 +115,8 @@ Learning）、模仿学习（Imitation
 Learning，IL）这几个大类。现有深度强化学习平台主要实现免模型强化学习算法。
 
 免模型强化学习算法按照模型的学习特性进行区分，可分为同策略学习（On-policy
-learning）和异策略学习（Off-policy
-learning）。同策略学习指所有与环境交互采样出来的轨迹立即拿去训练策略，训练完毕之后即丢弃；而异策略学习指将所有采集出来的数据存储在一个数据缓冲区中，训练策略时从缓冲区中采样出若干数据组进行训练。
+Learning）和异策略学习（Off-policy
+Learning）。同策略学习指所有与环境交互采样出来的轨迹立即拿去训练策略，训练完毕之后即丢弃；而异策略学习指将所有采集出来的数据存储在一个数据缓冲区中，训练策略时从缓冲区中采样出若干数据组进行训练。
 
 .. _rl_abs:
 
@@ -132,7 +132,7 @@ learning）。同策略学习指所有与环境交互采样出来的轨迹立即
 
 #. 策略（Policy）：策略是智能体决策的核心部分，将其形式化表示为
 
-   .. math:: \pi_\theta(o_t,h_t) \Rightarrow (a_t, h_{t+1}, p_t)
+   .. math:: \pi_\theta: (o_t,h_t) \mapsto (a_t, h_{t+1}, p_t)
       :label: equ-policy
 
    其中 :math:`h_t` 是 :math:`t`
