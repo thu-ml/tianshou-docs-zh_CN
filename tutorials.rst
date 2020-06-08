@@ -69,13 +69,21 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 
 定义网络的规则如下：
 
-* 输入
-   - ``obs``，观测值，为 ``numpy.ndarray`` 或者 ``torch.Tensor``
+-  输入
+
+   - ``obs``，观测值，为 ``numpy.ndarray``、``torch.Tensor``、或者自定义的类、或者字典
+
    - ``state``，隐藏状态表示，为RNN使用，可以为字典或者 ``numpy.ndarray`` 或者 ``torch.Tensor``
+
    - ``info``，环境信息，由环境提供，是一个字典
-* 输出
+
+-  输出
+
    - ``logits``：网络的原始输出，会被用来计算Policy，比如输出Q值，然后在DQNPolicy中后续会进一步计算 :math:`\arg\max_a Q(s, a)`；又比如PPO :cite:`ppo` 算法中，如果使用对角高斯策略，则 ``logits`` 为 ``(mu, sigma)``
+
    - ``state``：下一个隐藏状态，还是为了RNN
+
+   - ``policy``：策略输出的中间值，用于后续训练时使用，会被存储至Replay Buffer中
 
 初始化策略
 ----------
