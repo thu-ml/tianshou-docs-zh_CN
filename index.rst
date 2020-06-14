@@ -60,6 +60,7 @@
    :caption: 教程
 
    tutorials
+   cheatsheet
 
 .. toctree::
    :maxdepth: 2
