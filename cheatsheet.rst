@@ -15,7 +15,7 @@
 构建策略
 --------
 
-参见 `BasePolicy </en/latest/api/tianshou.policy.html#tianshou.policy.BasePolicy>`_。
+参见 `BasePolicy </en/master/api/tianshou.policy.html#tianshou.policy.BasePolicy>`_。
 
 .. _customize_training:
 
@@ -29,22 +29,52 @@
 环境并行采样
 ------------
 
-使用 `tianshou.env.VectorEnv </en/latest/api/tianshou.env.html#tianshou.env.VectorEnv>`_ 或者 `tianshou.env.SubprocVectorEnv </en/latest/api/tianshou.env.html#tianshou.env.SubprocVectorEnv>`_：
-::
+天授提供了四种类：
 
-    env_fns = [
-        lambda: MyTestEnv(size=2),
-        lambda: MyTestEnv(size=3),
-        lambda: MyTestEnv(size=4),
-        lambda: MyTestEnv(size=5),
-    ]
-    venv = SubprocVectorEnv(env_fns)
+- :class:`~tianshou.env.DummyVectorEnv` 使用原始的for循环实现，可用于debug，小规模的环境用这个的开销会比其他三种小
 
-其中 ``env_fns`` 是个产生环境的可调用函数的列表。上面的代码也可以写成下面这样带for循环的形式：
+- :class:`~tianshou.env.SubprocVectorEnv` 用多进程来实现的，最常用
+
+- :class:`~tianshou.env.ShmemVectorEnv` 是上面这个多进程实现的一个改进：把环境的obs用一个shared buffer来存储，降低比较大的obs的开销（比如图片等）
+
+- :class:`~tianshou.env.RayVectorEnv` 基于Ray的实现，可以用于多机
+
+这些类虽说是用于不同的场景中，但是他们的API都是一致的，只需要提供一个可调用的env列表即可，像这样：
+
 ::
 
     env_fns = [lambda x=i: MyTestEnv(size=x) for i in [2, 3, 4, 5]]
-    venv = SubprocVectorEnv(env_fns)
+    venv = SubprocVectorEnv(env_fns)  # DummyVectorEnv/ShmemVectorEnv/RayVectorEnv 都行
+    venv.reset()  # 这个会返回每个环境最初的obs
+    venv.step(actions)  # actions长度是env的数量，返回也是这些env原始返回值concat起来之后的结果
+
+.. sidebar:: 一个venv同步或异步执行的例子，相同颜色代表这些episode会组合起来由venv返回出去
+
+     .. Figure:: /_static/images/async.png
+
+默认情况下是使用同步模式（sync mode），就像图中最上面那样。如果每个env step耗时差不多的话，这种模式开销最小。但如果每个env step耗时差别很大的话（比如通常1s，偶尔会10s），这个时候async就派上用场了（`Issue 103 <https://github.com/thu-ml/tianshou/issues/103>`_）：只需要多提供两个参数（或者其中之一也行），一个是 ``wait_num``，表示一旦达到这么多env结束就返回（比如4个env，设置 ``wait_num = 3`` 的话，每一步venv.step只会返回4个env中的3个结果）；另一个是 ``timeout``，表示一旦超过这个时间并且有env已经结束了的话就返回结果。
+
+::
+
+    env_fns = [lambda x=i: MyTestEnv(size=x, sleep=x) for i in [2, 3, 4, 5]]
+    venv = SubprocVectorEnv(env_fns, wait_num=3, timeout=0.2)
+    venv.reset()
+    # returns "wait_num" steps or finished steps after "timeout" seconds,
+    # whichever occurs first.
+    venv.step(actions, ready_id)
+
+
+.. warning::
+
+    如果自定义环境的话，记得设置 ``seed`` 比如这样：
+
+    ::
+
+        def seed(self, seed):
+            np.random.seed(seed)
+
+    如果seed没有被重写，每个环境的seed都是全局的seed，都会产生一样的结果，相当于一个env的数据复制了好多次，没啥用。
+
 
 .. _preprocess_fn:
 
@@ -55,7 +85,7 @@
 
 如果想收集训练log、预处理图像数据（比如Atari要resize到84x84x3）、根据环境信息修改奖励函数的值，可以在Collector中使用 ``preprocess_fn`` 接口，它会在数据存入Buffer之前被调用。
 
-``preprocess_fn`` 接收7个保留关键字（obs/act/rew/done/obs_next/info/policy），返回需要修改的部分，以字典（dict）或者数据组（Batch）的形式返回均可，比如可以像下面这个例子一样：
+``preprocess_fn`` 接收7个保留关键字（obs/act/rew/done/obs_next/info/policy），以数据组（Batch）的形式返回需要修改的部分，比如可以像下面这个例子一样：
 ::
 
     import numpy as np
@@ -70,7 +100,7 @@
             """把reward给归一化"""
             if 'rew' not in kwargs:
                 # 意味着 preprocess_fn 是在 env.reset() 之后被调用的，此时kwargs里面只有obs
-                return {}  # 没有变量需要更新，返回空
+                return Batch()  # 没有变量需要更新，返回空
             else:
                 n = len(kwargs['rew'])  # Collector 中的环境数量
                 if self.episode_log is None:
@@ -84,7 +114,6 @@
                         self.episode_log[i] = []
                         self.baseline = np.mean(self.main_log)
                 return Batch(rew=kwargs['rew'])
-                # 也可以返回 {'rew': kwargs['rew']}
 
 最终只需要在Collector声明的时候加入一下这个hooker：
 ::
@@ -106,9 +135,9 @@ RNN训练
 
     buf = ReplayBuffer(size=size, stack_num=stack_num)
 
-然后把神经网络模型中 ``state`` 参数用起来，可以参考 `代码片段 1 <https://github.com/thu-ml/tianshou/blob/master/test/discrete/net.py>`_ 中的 ``Recurrent``，或者 `代码片段 2 <https://github.com/thu-ml/tianshou/blob/master/test/continuous/net.py>`_ 中的 ``RecurrentActor`` 和 ``RecurrentCritic``。
+然后把神经网络模型中 ``state`` 参数用起来，可以参考 :class:`~tianshou.utils.net.common.Recurrent`、:class:`~tianshou.utils.net.continuous.RecurrentActorProb` 和 :class:`~tianshou.utils.net.continuous.RecurrentCritic`。
 
-以上代码片段展示了如何修改ReplayBuffer和神经网络模型，从而使用堆叠采样的观测值（stacked-obs）来训练RNN。如果想要堆叠别的值（比如stacked-action来训练Q(stacked-obs, stacked-action)），可以使用一个 ``gym.wrapper`` 来修改状态表示，比如wrapper把状态改为 [s, a] 的元组：
+以上代码片段展示了如何修改ReplayBuffer和神经网络模型，从而使用堆叠采样的观测值（stacked-obs）来训练RNN。如果想要堆叠别的值（比如stacked-action来训练Q(stacked-obs, stacked-action)），可以使用一个 ``gym.Wrapper`` 来修改状态表示，比如wrapper把状态改为 [s, a] 的元组：
 
 - 之前的数据存储：(s, a, s', r, d)，可以获得堆叠的s
 - 采用wrapper之后的存储：([s, a], a, [s', a'], r, d)，可以获得堆叠的[s, a]，拆开来就是堆叠的s和a
@@ -126,15 +155,15 @@ RNN训练
 
 - step(action) -> state, reward, done, info
 
-- seed(s) -> None
+- seed(s) -> List[int]
 
-- render(mode) -> None
+- render(mode) -> Any
 
 - close() -> None
 
-- observation_space
+- observation_space: gym.Space
 
-- action_space
+- action_space: gym.Space
 
 环境状态（state）可以是一个 ``numpy.ndarray`` 或者一个Python字典。比如以 ``FetchReach-v1`` 环境为例：
 ::
@@ -242,3 +271,39 @@ RNN训练
     def step(a):
         ...
         return copy.deepcopy(self.graph), reward, done, {}
+
+
+.. _marl_example:
+
+多智能体强化学习
+----------------------------------
+
+本条目与 `Issue 121 <https://github.com/thu-ml/tianshou/issues/121>`_ 相关。
+
+多智能体强化学习大概可以分为如下三类：
+
+1. Simultaneous move：所有玩家在每个timestep都同时行动，比如moba游戏；
+
+2. Cyclic move：每个玩家轮流行动，比如飞行棋；
+
+3. Conditional move：每个玩家在当前timestep下面所能采取的行动受限于环境，比如 `Pig Game <https://en.wikipedia.org/wiki/Pig_(dice_game)>`_。
+
+这些基本上都能被转换为正常RL的形式。比如第一个 simultaneous move 只需要加一个 ``num_agent`` 标记一下，剩下代码都不用变；2和3的话，可以统一起来：环境在每个timestep选择id为 ``agent_id`` 的玩家进行游戏，更近一步把“所有的玩家”看做一个抽象的玩家的话（可以称之为MultiAgentPolicyManager，多智能体策略代理），就相当于单个玩家的情况，只不过每次多了个信息叫做 ``agent_id``，由这个代理转发给下属的各个玩家即可。至于3的condition，只需要多加一个信息叫做mask就行了。大概像下面这张图一样：
+
+.. image:: /_static/images/marl.png
+    :align: center
+    :height: 300
+
+可以把上述文字描述形式化为下面的伪代码：
+::
+
+    action = policy(state, agent_id, mask)
+    (next_state, next_agent_id, next_mask), reward = env.step(action)
+
+于是只要创建一个新的state：``state_ = (state, agent_id, mask)``，就可以使用之前正常的代码：
+::
+
+    action = policy(state_)
+    next_state_, reward = env.step(action)
+
+基于这种思路，我们写了个用DQN玩 `四子棋 <https://en.wikipedia.org/wiki/Tic-tac-toe>`_ 的demo，可以在 `这里 </en/master/tutorials/tictactoe.html>`_ 查看。

@@ -20,6 +20,7 @@ Deep Q Network
 
 CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决这种任务。在使用不同种类的强化学习算法前，您需要了解每个算法是否能够应用在离散动作空间场景 / 连续动作空间场景中，比如像DDPG :cite:`ddpg` 就只能用在连续动作空间任务中，其他基于策略梯度的算法可以用在任意这两个场景中。
 
+
 并行环境装饰器
 --------------
 
@@ -32,10 +33,11 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 天授提供了向量化环境装饰器，比如 :class:`~tianshou.env.VectorEnv`、:class:`~tianshou.env.SubprocVectorEnv` 和 :class:`~tianshou.env.RayVectorEnv`。可以像下面这样使用：
 ::
 
-    train_envs = ts.env.VectorEnv([lambda: gym.make('CartPole-v0') for _ in range(8)])
-    test_envs = ts.env.VectorEnv([lambda: gym.make('CartPole-v0') for _ in range(100)])
+    train_envs = ts.env.DummyVectorEnv([lambda: gym.make('CartPole-v0') for _ in range(8)])
+    test_envs = ts.env.DummyVectorEnv([lambda: gym.make('CartPole-v0') for _ in range(100)])
 
 此处在 ``train_envs`` 建立了8个环境，在 ``test_envs`` 建立了100个环境。接下来为了展示需要，使用后面那块代码。
+
 
 .. _build_the_network:
 
@@ -85,7 +87,8 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 
    - ``state``：下一个隐藏状态，还是为了RNN
 
-   - ``policy``：策略输出的中间值，用于后续训练时使用，会被存储至Replay Buffer中
+一些已经定义好并已经内置的MLP网络可以在 ``tianshou.utils.net.common``、``tianshou.utils.net.discrete`` 和 ``tianshou.utils.net.continuous`` 中找到。
+
 
 初始化策略
 ----------
@@ -93,9 +96,7 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 我们使用上述代码中定义的 ``net`` 和 ``optim``，以及其他超参数，来定义一个策略。此处定义了一个有目标网络（Target Network）的DQN策略：
 ::
 
-    policy = ts.policy.DQNPolicy(net, optim,
-        discount_factor=0.9, estimation_step=3,
-        use_target_network=True, target_update_freq=320)
+    policy = ts.policy.DQNPolicy(net, optim, discount_factor=0.9, estimation_step=3, target_update_freq=320)
 
 
 定义采集器
@@ -119,9 +120,9 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
         policy, train_collector, test_collector,
         max_epoch=10, step_per_epoch=1000, collect_per_step=10,
         episode_per_test=100, batch_size=64,
-        train_fn=lambda e: policy.set_eps(0.1),
-        test_fn=lambda e: policy.set_eps(0.05),
-        stop_fn=lambda x: x >= env.spec.reward_threshold,
+        train_fn=lambda epoch, env_step: policy.set_eps(0.1),
+        test_fn=lambda epoch, env_step: policy.set_eps(0.05),
+        stop_fn=lambda mean_rewards: mean_rewards >= env.spec.reward_threshold,
         writer=None)
     print(f'Finished training! Use {result["duration"]}')
 
@@ -132,8 +133,8 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 * ``collect_per_step``：每次更新前要收集多少帧与环境的交互数据。上面的代码参数意思是，每收集10帧进行一次网络更新
 * ``episode_per_test``：每次测试的时候花几个rollout进行测试
 * ``batch_size``：每次策略计算的时候批量处理多少数据
-* ``train_fn``：在每个epoch训练之前被调用的函数，输入的是当前第几轮epoch。上面的代码意味着，在每次训练前将epsilon设置成0.1
-* ``test_fn``：在每个epoch测试之前被调用的函数，输入的是当前第几轮epoch。上面的代码意味着，在每次测试前将epsilon设置成0.05
+* ``train_fn``：在每个epoch训练之前被调用的函数，输入的是当前第几轮epoch和当前用于训练的env一共step了多少次。上面的代码意味着，在每次训练前将epsilon设置成0.1
+* ``test_fn``：在每个epoch测试之前被调用的函数，输入的是当前第几轮epoch和当前用于训练的env一共step了多少次。上面的代码意味着，在每次测试前将epsilon设置成0.05
 * ``stop_fn``：停止条件，输入是当前平均总奖励回报（the average undiscounted returns），返回是否要停止训练
 * ``writer``：天授支持 `TensorBoard <https://www.tensorflow.org/tensorboard>`_，可以像下面这样初始化：
 
@@ -179,9 +180,10 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 采集器 :class:`~tianshou.data.Collector` 支持渲染智能体的表现。下面的代码展示了以35FPS的帧率查看智能体表现：
 ::
 
+    policy.eval()
+    policy.set_eps(0.05)
     collector = ts.data.Collector(policy, env)
     collector.collect(n_episode=1, render=1 / 35)
-    collector.close()
 
 
 .. _customized_trainer:
