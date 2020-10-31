@@ -73,6 +73,7 @@
    :maxdepth: 1
    :caption: 教程
 
+   slide
    tutorials
    concepts
    cheatsheet
