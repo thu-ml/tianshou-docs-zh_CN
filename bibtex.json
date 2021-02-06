@@ -1,0 +1,90 @@
+{
+    "cited": {
+        "docs/0-abstract": [
+            "dqn",
+            "alphago",
+            "alphafold",
+            "dota2",
+            "pytorch"
+        ],
+        "docs/1-intro": [
+            "alexnet",
+            "mask-rcnn",
+            "yolov3",
+            "deepface",
+            "unet",
+            "td",
+            "dqn",
+            "alphago",
+            "dota2",
+            "baselines",
+            "spinningup",
+            "rllib",
+            "rlpyt",
+            "rlkit",
+            "garage",
+            "dopamine",
+            "bsuite",
+            "stable-baselines",
+            "keras-rl",
+            "pytorch-drl",
+            "tensorforce",
+            "gym",
+            "tensorflow",
+            "pytorch"
+        ],
+        "docs/2-impl": [
+            "dqn",
+            "her",
+            "gym",
+            "ppo"
+        ],
+        "docs/3-algo": [
+            "pg",
+            "a2c",
+            "ppo",
+            "trpo",
+            "gae",
+            "baselines",
+            "dqn",
+            "double-dqn",
+            "per",
+            "ddpg",
+            "dpg",
+            "td3",
+            "sac",
+            "irl",
+            "gail"
+        ],
+        "docs/4-exp": [
+            "rllib",
+            "baselines",
+            "pytorch-drl",
+            "stable-baselines",
+            "rlpyt",
+            "dqn",
+            "double-dqn",
+            "per",
+            "pg",
+            "a2c",
+            "ppo",
+            "ddpg",
+            "td3",
+            "sac",
+            "gym"
+        ],
+        "docs/5-example": [
+            "dqn"
+        ],
+        "docs/6-conclusion": [
+            "rainbow",
+            "alphago",
+            "gail"
+        ],
+        "tutorials": [
+            "dqn",
+            "ddpg",
+            "ppo"
+        ]
+    }
+}

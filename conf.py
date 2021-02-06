@@ -77,8 +77,9 @@ html_logo = '_static/images/tianshou-logo.png'
 
 
 def setup(app):
-    app.add_stylesheet("css/style.css")
+    app.add_css_file("css/style.css")
 
+bibtex_bibfiles = ['refs.bib']
 # -- Extension configuration -------------------------------------------------
 
 # -- Options for intersphinx extension ---------------------------------------
