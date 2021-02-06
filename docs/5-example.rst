@@ -35,9 +35,9 @@
 ::
 
     # you can also use SubprocVectorEnv
-    train_envs = ts.env.VectorEnv([
+    train_envs = ts.env.DummyVectorEnv([
         lambda: gym.make(task) for _ in range(train_num)])
-    test_envs = ts.env.VectorEnv([
+    test_envs = ts.env.DummyVectorEnv([
         lambda: gym.make(task) for _ in range(test_num)])
 
 使用PyTorch原生定义的网络结构，并定义优化器：
@@ -243,9 +243,9 @@
 ::
 
     task = 'FetchReach-v1'
-    train_envs = ts.env.VectorEnv([
+    train_envs = ts.env.DummyVectorEnv([
         lambda: gym.make(task) for _ in range(train_num)]) 
-    test_envs = ts.env.VectorEnv([
+    test_envs = ts.env.DummyVectorEnv([
         lambda: gym.make(task) for _ in range(test_num)])
 
     class Net(nn.Module):
