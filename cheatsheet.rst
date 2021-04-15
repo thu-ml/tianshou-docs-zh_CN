@@ -83,19 +83,23 @@
 
 本条目与 `Issue 42 <https://github.com/thu-ml/tianshou/issues/42>`_ 相关。
 
-如果想收集训练log、预处理图像数据（比如Atari要resize到84x84x3）、根据环境信息修改奖励函数的值，可以在Collector中使用 ``preprocess_fn`` 接口，它会在数据存入Buffer之前被调用。
+如果想收集训练log、预处理图像数据（比如Atari要resize到84x84x3 -- 不过这个推荐直接wrapper做）、根据环境信息修改奖励函数的值，可以在Collector中使用 ``preprocess_fn`` 接口，它会在数据存入Buffer之前被调用。
 
-``preprocess_fn`` 接收7个保留关键字（obs/act/rew/done/obs_next/info/policy），以数据组（Batch）的形式返回需要修改的部分，比如可以像下面这个例子一样：
+``preprocess_fn`` 有两种输入接口：如果是env.reset()的话，它只会接收obs；如果是正常的env.step()，那么他会接收5个关键字 "obs_next"/"rew"/"done"/"info"/"policy"。返回一个字典或者Batch，里面包含着你想修改的东西。
+
 ::
 
     import numpy as np
     from collections import deque
+
+
     class MyProcessor:
         def __init__(self, size=100):
             self.episode_log = None
             self.main_log = deque(maxlen=size)
             self.main_log.append(0)
             self.baseline = 0
+
         def preprocess_fn(**kwargs):
             """把reward给归一化"""
             if 'rew' not in kwargs:
@@ -119,7 +123,7 @@
 ::
 
     test_processor = MyProcessor(size=100)
-    collector = Collector(policy, env, buffer, test_processor.preprocess_fn)
+    collector = Collector(policy, env, buffer, preprocess_fn=test_processor.preprocess_fn)
 
 还有一些示例在 `test/base/test_collector.py <https://github.com/thu-ml/tianshou/blob/master/test/base/test_collector.py>`_ 中可以查看。
 
@@ -249,6 +253,8 @@ RNN训练
 当然如果自定义的环境中，状态是一个自定义的类，也是可以的。不过天授只会把它的地址进行存储，就像下面这样（状态是nx.Graph）：
 ::
 
+    >>> # 这个例子可能现在不太能work，因为numpy升级了，以及nx.Graph重写了__getitem__，导致np.array([nx.Graph()])会出来空的数组……
+    >>> # 不过正常的自定义class应该没啥问题
     >>> import networkx as nx
     >>> b = ReplayBuffer(size=3)
     >>> b.add(obs=nx.Graph(), act=0, rew=0, done=0)

@@ -17,7 +17,7 @@ Batch
     >>> import torch, numpy as np
     >>> from tianshou.data import Batch
     >>> data = Batch(a=4, b=[5, 5], c='2312312', d=('a', -2, -3))
-    >>> # the list will automatically be converted to numpy array
+    >>> # 注意，list会自动变成numpy
     >>> data.b
     array([5, 5])
     >>> data.b = np.array([3, 4, 5])
@@ -38,7 +38,7 @@ Batch
         act: tensor([0., 6.]),
     )
 
-总之就是可以定义任何key-value放在Batch里面，然后可以做一些常规的操作比如+-\*、cat/stack之类的。`Understand Batch </en/master/tutorials/batch.html>`_ 里面详细描述了Batch的各种用法，非常值得一看。
+总之就是可以定义任何key-value放在Batch里面，然后可以做一些常规的操作比如+-\*、cat/stack之类的。`Understand Batch </en/master/tutorials/batch.html>`_ 里面详细描述了Batch的各种用法，非常值得一看（虽然它是英文的但只要看代码也还行？）。
 
 
 Buffer
@@ -58,31 +58,40 @@ Buffer
 ::
 
     >>> import pickle, numpy as np
-    >>> from tianshou.data import ReplayBuffer
+    >>> from tianshou.data import Batch, ReplayBuffer
     >>> buf = ReplayBuffer(size=20)
     >>> for i in range(3):
-    ...     buf.add(obs=i, act=i, rew=i, done=i, obs_next=i + 1, info={})
-    >>> buf.obs
-    # 因为设置了 size = 20，所以 len(buf.obs) == 20
-    array([0., 1., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-           0., 0., 0., 0.])
+    ...     buf.add(Batch(obs=i, act=i, rew=i, done=0, obs_next=i + 1, info={}))
+
+    >>> buf.obs  # 因为设置了 size = 20，所以 len(buf.obs) == 20
+    array([0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     >>> # 但是里面只有3个合法的数据，因此 len(buf) == 3
     >>> len(buf)
     3
     >>> pickle.dump(buf, open('buf.pkl', 'wb'))  # 把buffer所有数据保存到 "buf.pkl"
+    >>> buf.save_hdf5('buf.hdf5')  # 把buffer所有数据保存到 "buf.hdf5"
+
     >>> buf2 = ReplayBuffer(size=10)
     >>> for i in range(15):
-    ...     buf2.add(obs=i, act=i, rew=i, done=i, obs_next=i + 1, info={})
+    ...     done = i % 4 == 0
+    ...     buf2.add(Batch(obs=i, act=i, rew=i, done=done, obs_next=i + 1, info={}))
     >>> len(buf2)
     10
-    >>> buf2.obs
-    # 因为 buf2 的 size = 10，所以它只会存储最后10步的结果
-    array([10., 11., 12., 13., 14.,  5.,  6.,  7.,  8.,  9.])
+    >>> buf2.obs  # 因为 buf2 的 size = 10，所以它只会存储最后10步的结果
+    array([10, 11, 12, 13, 14,  5,  6,  7,  8,  9])
 
-    >>> # 把 buf2 的数据挪到buf里面，同时保持相对时间顺序
-    >>> buf.update(buf2)
-    array([ 0.,  1.,  2.,  5.,  6.,  7.,  8.,  9., 10., 11., 12., 13., 14.,
-            0.,  0.,  0.,  0.,  0.,  0.,  0.])
+    >>> buf.update(buf2)  # 把 buf2 的数据挪到buf里面，同时保持相对时间顺序
+    >>> buf.obs
+    array([ 0,  1,  2,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,  0,  0,  0,
+            0,  0,  0,  0])
+
+    >>> indice = buf.sample_index(0)  # 使用 batchsize=0 来获取buffer里面的全部数据
+    >>> indice
+    array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12])
+    >>> buf.prev(indice)  # 给定index，计算上一个transition所对应的index
+    array([ 0,  0,  1,  2,  3,  4,  5,  7,  7,  8,  9, 11, 11])
+    >>> buf.next(indice)  # 给定index，计算下一个transition所对应的index
+    array([ 1,  2,  3,  4,  5,  6,  6,  8,  9, 10, 10, 12, 12])
 
     >>> # 从buffer里面拿一个随机的数据，batch_data就是buf[indice]
     >>> batch_data, indice = buf.sample(batch_size=4)
@@ -90,7 +99,11 @@ Buffer
     array([ True,  True,  True,  True])
     >>> len(buf)
     13
-    >>> buf = pickle.load(open('buf.pkl', 'rb'))  # load from "buf.pkl"
+
+    >>> buf = pickle.load(open('buf.pkl', 'rb'))  # 从"buf.pkl"文件恢复出buffer
+    >>> len(buf)
+    3
+    >>> buf = ReplayBuffer.load_hdf5('buf.hdf5')  # 从"buf.hdf5"导入完整的buffer
     >>> len(buf)
     3
 
@@ -100,46 +113,67 @@ Buffer
     >>> buf = ReplayBuffer(size=9, stack_num=4, ignore_obs_next=True)
     >>> for i in range(16):
     ...     done = i % 5 == 0
-    ...     buf.add(obs={'id': i}, act=i, rew=i, done=done,
-    ...             obs_next={'id': i + 1})
+    ...     ptr, ep_rew, ep_len, ep_idx = buf.add(
+    ...         Batch(obs={'id': i}, act=i, rew=i,
+    ...               done=done, obs_next={'id': i + 1}))
+    ...     print(i, ep_len, ep_rew)
+    0 [1] [0.]
+    1 [0] [0.]
+    2 [0] [0.]
+    3 [0] [0.]
+    4 [0] [0.]
+    5 [5] [15.]
+    6 [0] [0.]
+    7 [0] [0.]
+    8 [0] [0.]
+    9 [0] [0.]
+    10 [5] [40.]
+    11 [0] [0.]
+    12 [0] [0.]
+    13 [0] [0.]
+    14 [0] [0.]
+    15 [5] [65.]
     >>> print(buf)  # 可以发现obs_next并不在里面存着
     ReplayBuffer(
-        act: array([ 9., 10., 11., 12., 13., 14., 15.,  7.,  8.]),
-        done: array([0., 1., 0., 0., 0., 0., 1., 0., 0.]),
-        info: Batch(),
         obs: Batch(
-                 id: array([ 9., 10., 11., 12., 13., 14., 15.,  7.,  8.]),
+                 id: array([ 9, 10, 11, 12, 13, 14, 15,  7,  8]),
              ),
-        policy: Batch(),
+        act: array([ 9, 10, 11, 12, 13, 14, 15,  7,  8]),
         rew: array([ 9., 10., 11., 12., 13., 14., 15.,  7.,  8.]),
+        done: array([False, True, False, False, False, False, True, False,
+                     False]),
     )
     >>> index = np.arange(len(buf))
     >>> print(buf.get(index, 'obs').id)
-    [[ 7.  7.  8.  9.]
-     [ 7.  8.  9. 10.]
-     [11. 11. 11. 11.]
-     [11. 11. 11. 12.]
-     [11. 11. 12. 13.]
-     [11. 12. 13. 14.]
-     [12. 13. 14. 15.]
-     [ 7.  7.  7.  7.]
-     [ 7.  7.  7.  8.]]
-    >>> # 也可以这样取出stacked过的obs
-    >>> np.allclose(buf.get(index, 'obs')['id'], buf[index].obs.id)
-    True
-    >>> # 可以通过 __getitem__ 来弄出obs_next（虽然并没存）
+    [[ 7  7  8  9]
+     [ 7  8  9 10]
+     [11 11 11 11]
+     [11 11 11 12]
+     [11 11 12 13]
+     [11 12 13 14]
+     [12 13 14 15]
+     [ 7  7  7  7]
+     [ 7  7  7  8]]
+    >>> # 也可以这样取出stacked过的obs（注意stack只对obs/obs_next/info/policy有效）
+    >>> abs(buf.get(index, 'obs')['id'] - buf[index].obs.id).sum().sum()
+    0
+    >>> # 可以通过 __getitem__ 来弄出obs_next（虽然并没存），但是[:]会按照时间顺序（而不是实际存储顺序）来取数据
+    >>> # 比如下面这个就相当于 index == [7, 8, 0, 1, 2, 3, 4, 5, 6]
     >>> print(buf[:].obs_next.id)
-    [[ 7.  8.  9. 10.]
-     [ 7.  8.  9. 10.]
-     [11. 11. 11. 12.]
-     [11. 11. 12. 13.]
-     [11. 12. 13. 14.]
-     [12. 13. 14. 15.]
-     [12. 13. 14. 15.]
-     [ 7.  7.  7.  8.]
-     [ 7.  7.  8.  9.]]
+    [[ 7  7  7  8]
+     [ 7  7  8  9]
+     [ 7  8  9 10]
+     [ 7  8  9 10]
+     [11 11 11 12]
+     [11 11 12 13]
+     [11 12 13 14]
+     [12 13 14 15]
+     [12 13 14 15]]
+    >>> full_index = np.array([7, 8, 0, 1, 2, 3, 4, 5, 6])
+    >>> np.allclose(buf[:].obs_next.id, buf[full_index].obs_next.id)
+    True
 
-天授还提供了其他类型的buffer比如 :class:`~tianshou.data.ListReplayBuffer` （基于list），:class:`~tianshou.data.PrioritizedReplayBuffer` （基于线段树）。可以访问对应的文档来查看。
+天授还提供了其他类型的buffer比如 :class:`~tianshou.data.PrioritizedReplayBuffer` （基于线段树）、:class:`~tianshou.data.VectorReplayBuffer` （能够向其中添加不同episode的数据的同时维护时间顺序）。可以访问对应的文档来查看。
 
 
 Policy
@@ -175,7 +209,7 @@ Policy
 |           Testing state           |       False     |      False      |
 +-----------------------------------+-----------------+-----------------+
 
-``policy.updating`` 实际情况下主要用于exploration，比如在各种Q-Learning算法中，在不同的state切换探索策略。
+``policy.updating`` 实际情况下主要用于exploration，比如在各种Q-Learning算法中，在不同的policy state切换探索策略。
 
 
 policy.forward
@@ -198,7 +232,7 @@ policy.forward
         act = policy(batch).act[0]  # policy.forward 返回一个 batch，使用 ".act" 来取出里面action的数据
         obs, rew, done, info = env.step(act)
 
-这边 ``Batch(obs=[obs])`` 会自动为obs下面的所有数据创建第0维，让它为batch size=1，否则nn没法确定batch size。
+这边 ``Batch(obs=[obs])`` 会自动为obs下面的所有数据创建第0维，让它为batch size=1，否则神经网络没法确定batch size。
 
 
 .. _process_fn:
@@ -257,14 +291,34 @@ policy.process_fn
 Collector
 ---------
 
-:class:`~tianshou.data.Collector` 负责policy与env的交互和数据存储。:meth:`~tianshou.data.Collector.collect` 是collector的主要方法，它能够指定让policy和环境交互至少 ``n_step`` 个step或者 ``n_episode`` 个episode，并把该过程中产生的数据存储到buffer中。
+:class:`~tianshou.data.Collector` 负责policy与env的交互和数据存储。:meth:`~tianshou.data.Collector.collect` 是collector的主要方法，它能够指定让policy和环境交互给定数目 ``n_step`` 个step或者 ``n_episode`` 个episode，并把该过程中产生的数据存储到buffer中。
 
-为啥这边强调 **至少**？因为天授使用了一个buffer来处理这些事情（当然还有一种方法是每个env对应单独的一个buffer）。如果用一个buffer做的话，需要维护若干个cache buffer，然后必须等到episode结束才能将cache buffer里面的数据转移到main buffer中，否则不能保证其中的时间顺序。
+:ref:`pseudocode` 给出了一个宏观层面的解释，其他collector的功能可参考对应文档。此处列出一些常用用法：
 
-这么做有优点也有缺点，缺点是老是有人提issue，得手动加一个 ``gym.wrappers.TimeLimit`` 在env上面（如果env的done一直是False的话）；优点是delayed update能够带来一定的性能提升，以及会大幅简化其他部分代码（比如PER、nstep、GAE这种就很简单，还有buffer.sample也还算简单，如果n个buffer的话就得多写很多代码）。
+::
 
-:ref:`pseudocode` 给出了一个宏观层面的解释，其他collector的功能可参考对应文档。
+    policy = PGPolicy(...)  # 或者其他policy都可以
+    env = gym.make("CartPole-v0")
 
+    replay_buffer = ReplayBuffer(size=10000)
+
+    # 这里单个env对应ReplayBuffer
+    collector = Collector(policy, env, buffer=replay_buffer)
+
+    # 多个env的话得用VectorReplayBuffer，但是collector仍然适用
+    vec_buffer = VectorReplayBuffer(total_size=10000, buffer_num=3)
+    # buffer_num推荐和env数量相等
+    envs = DummyVectorEnv([lambda: gym.make("CartPole-v0") for _ in range(3)])
+    collector = Collector(policy, envs, buffer=vec_buffer)
+
+    # 收集3个episode
+    collector.collect(n_episode=3)
+    # 收集至少俩step（这个会收集三个，因为有三个env，每次收集的次数得是3的倍数）
+    collector.collect(n_step=2)
+    # 边收集变直播，使用render参数就可以（render传入的是时间间隔，以秒为单位）
+    collector.collect(n_episode=1, render=0.03)
+
+还有个:class:`~tianshou.data.AsyncCollector`，继承了:class:`~tianshou.data.Collector`，它支持异步的环境采样（比如环境很慢或者step时间差异很大）。不过AsyncCollector的collect的语义和上面Collector有所不同，由于异步的特性，它只能保证**至少** ``n_step`` 或者 ``n_episode`` 地收集数据。
 
 Trainer
 -------

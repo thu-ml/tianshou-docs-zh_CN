@@ -22,11 +22,11 @@
     n_step = 4
     eps_train, eps_test = 0.1, 0.05
     epoch = 10
-    step_per_epoch = 1000
-    collect_per_step = 10
+    step_per_epoch = 10000
+    step_per_collect = 10
     target_freq = 320
     batch_size = 64
-    train_num, test_num = 8, 100
+    train_num, test_num = 10, 100
     buffer_size = 20000
     writer = SummaryWriter('log/dqn')
 
@@ -34,7 +34,7 @@
 
 ::
 
-    # you can also use SubprocVectorEnv
+    # 也可以用 SubprocVectorEnv
     train_envs = ts.env.DummyVectorEnv([
         lambda: gym.make(task) for _ in range(train_num)])
     test_envs = ts.env.DummyVectorEnv([
@@ -62,8 +62,7 @@
             return logits, state
 
     env = gym.make(task)
-    state_shape = env.observation_space.shape \
-        or env.observation_space.n
+    state_shape = env.observation_space.shape or env.observation_space.n
     action_shape = env.action_space.shape or env.action_space.n
     net = Net(state_shape, action_shape)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
@@ -76,28 +75,30 @@
         net, optim, gamma, n_step,
         target_update_freq=target_freq)
     train_collector = ts.data.Collector(
-        policy, train_envs, ts.data.ReplayBuffer(buffer_size))
-    test_collector = ts.data.Collector(policy, test_envs)
+        policy, train_envs, ts.data.VectorReplayBuffer(buffer_size, train_num),
+        exploration_noise=True)
+    test_collector = ts.data.Collector(policy, test_envs, exploration_noise=True)
 
 开始训练：
 
 ::
 
     result = ts.trainer.offpolicy_trainer(
-        policy, train_collector, test_collector, epoch, 
-        step_per_epoch, collect_per_step, test_num, batch_size, 
-        train_fn=lambda e: policy.set_eps(eps_train),
-        test_fn=lambda e: policy.set_eps(eps_test),
-        stop_fn=lambda x: x >= env.spec.reward_threshold, 
-        writer=writer, task=task)
+        policy, train_collector, test_collector, max_epoch=epoch,
+        step_per_epoch=step_per_epoch, step_per_collect=step_per_collect,
+        update_per_step=1 / step_per_collect, episode_per_test=test_num,
+        batch_size=batch_size, logger=ts.utils.BasicLogger(writer),
+        train_fn=lambda epoch, env_step: policy.set_eps(0.1),
+        test_fn=lambda epoch, env_step: policy.set_eps(0.05),
+        stop_fn=lambda mean_rewards: mean_rewards >= env.spec.reward_threshold)
     print(f'Finished training! Use {result["duration"]}')
 
 会有进度条显示，并且在大约10秒内训练完毕，结果如下：
 
 .. code:: bash
 
-    Epoch #1:  88%|#8| 880/1000 [00:05<00:00, ..., v/st=17329.91]
-    Finished training! Use 5.45s
+    Epoch #1:  95%|#8| 9480/10000 [00:04<00:00, ..., rew=200.00]
+    Finished training! Use 4.79s
 
 可以将训练完毕的策略模型存储至文件中或者从已有文件中导入模型权重：
 
@@ -110,9 +111,10 @@
 
 ::
 
-    collector = ts.data.Collector(policy, env)
+    policy.eval()
+    policy.set_eps(0.05)
+    collector = ts.data.Collector(policy, env, exploration_noise=True)
     collector.collect(n_episode=1, render=1 / 35)
-    collector.close()
 
 查看TensorBoard中存储的结果：
 
@@ -134,34 +136,27 @@
 
 ::
 
-    # pre-collect 5000 frames with random action before training
-    policy.set_eps(1)
-    train_collector.collect(n_step=5000)
+    # 在正式训练前先收集5000帧数据
+    train_collector.collect(n_step=5000, random=True)
 
     policy.set_eps(0.1)
-    for i in range(int(1e6)):  # total step
+    for i in range(int(1e6)):  # 训练总数
         collect_result = train_collector.collect(n_step=10)
 
-        # once if the collected episodes' mean returns reach
-        # the threshold, or every 1000 steps, we test it on 
-        # test_collector
-        if collect_result['rew'] >= env.spec.reward_threshold \ 
-                or i % 1000 == 0:
+        # 如果收集的episode平均总奖励回报超过了阈值，或者每隔1000步，
+        # 就会对policy进行测试
+        if collect_result['rews'].mean() >= env.spec.reward_threshold or i % 1000 == 0:
             policy.set_eps(0.05)
             result = test_collector.collect(n_episode=100)
-            if result['rew'] >= env.spec.reward_threshold:
-                # end of training loop
+            if result['rews'].mean() >= env.spec.reward_threshold:
+                print(f'Finished training! Test mean returns: {result["rews"].mean()}')
                 break
             else:
-                # back to training eps
+                # 重新设置eps为0.1，表示训练策略
                 policy.set_eps(0.1)
 
-        # train policy with a sampled batch data
-        losses = policy.learn(
-            train_collector.sample(batch_size=64))
-
-    print('Finished training! Test mean returns:', 
-          str(result["rew"]))
+        # 使用采样出的数据组进行策略训练
+        losses = policy.update(64, train_collector.buffer)
 
 实例二：循环神经网络的训练
 --------------------------
@@ -212,8 +207,7 @@
 ::
 
     env = gym.make(task)
-    state_shape = env.observation_space.shape \
-        or env.observation_space.n
+    state_shape = env.observation_space.shape or env.observation_space.n
     action_shape = env.action_space.shape or env.action_space.n
     net = Recurrent(state_shape, action_shape)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
@@ -223,15 +217,16 @@
         target_update_freq=target_freq)
     train_collector = ts.data.Collector(
         policy, train_envs,
-        ts.data.ReplayBuffer(buffer_size, stack_num=4))
-    test_collector = ts.data.Collector(policy, test_envs)
+        ts.data.VectorReplayBuffer(buffer_size, train_num, stack_num=4),
+        exploration_noise=True)
+    test_collector = ts.data.Collector(policy, test_envs, exploration_noise=True)
 
 即可使用实例一中的代码进行正常训练，结果如下：
 
 ::
 
-    Epoch #1:  83%|#4| 831/1000 [00:19<00:03, ..., v/st=13832.13]
-    Finished training! Use 19.63s
+    Epoch #2:  84%|#4| 8420/10000 [00:21<00:03, ..., rew=200.00]
+    Finished training! Use 37.22s
 
 实例三：多模态任务训练
 ----------------------
@@ -275,5 +270,4 @@
     net = Net(state_shape, action_shape)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
 
-剩下的代码与实例一一致，可以直接运行。通过对比可以看出，只需改动神经网络中
-``forward`` 函数的 :math:`s` 参数的处理即可。
+剩下的代码与实例一一致，可以直接运行。通过对比可以看出，只需改动神经网络中 ``forward`` 函数的 :math:`s` 参数的处理即可。

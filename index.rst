@@ -8,23 +8,28 @@
 
 `天授 <https://baike.baidu.com/item/%E5%A4%A9%E6%8E%88>`_ 是一个基于PyTorch的深度强化学习平台，目前实现的算法有：
 
+* DQN :class:`~tianshou.policy.DQNPolicy` `Deep Q-Network <https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf>`_
+* 双网络DQN :class:`~tianshou.policy.DQNPolicy` `Double DQN <https://arxiv.org/pdf/1509.06461.pdf>`_
+* 值分布DQN :class:`~tianshou.policy.C51Policy` `Categorical DQN <https://arxiv.org/pdf/1707.06887.pdf>`_
+* 分位数回归DQN :class:`~tianshou.policy.QRDQNPolicy` `Quantile Regression DQN <https://arxiv.org/pdf/1710.10044.pdf>`_
 * 策略梯度 :class:`~tianshou.policy.PGPolicy` `Policy Gradient <https://papers.nips.cc/paper/1713-policy-gradient-methods-for-reinforcement-learning-with-function-approximation.pdf>`_
-* 深度Q网络 :class:`~tianshou.policy.DQNPolicy` `Deep Q-Network <https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf>`_
-* 双网络深度Q学习 :class:`~tianshou.policy.DQNPolicy` `Double DQN <https://arxiv.org/pdf/1509.06461.pdf>`_
 * 优势动作评价 :class:`~tianshou.policy.A2CPolicy` `Advantage Actor-Critic <https://openai.com/blog/baselines-acktr-a2c/>`_
-* 深度确定性策略梯度 :class:`~tianshou.policy.DDPGPolicy` `Deep Deterministic Policy Gradient <https://arxiv.org/pdf/1509.02971.pdf>`_
+* 信任区域策略优化 :class:`~tianshou.policy.TRPOPolicy` `Trust Region Policy Optimization <https://arxiv.org/pdf/1502.05477.pdf>`_
 * 近端策略优化 :class:`~tianshou.policy.PPOPolicy` `Proximal Policy Optimization <https://arxiv.org/pdf/1707.06347.pdf>`_
+* 深度确定性策略梯度 :class:`~tianshou.policy.DDPGPolicy` `Deep Deterministic Policy Gradient <https://arxiv.org/pdf/1509.02971.pdf>`_
 * 双延迟深度确定性策略梯度 :class:`~tianshou.policy.TD3Policy` `Twin Delayed DDPG <https://arxiv.org/pdf/1802.09477.pdf>`_
 * 软动作评价 :class:`~tianshou.policy.SACPolicy` `Soft Actor-Critic <https://arxiv.org/pdf/1812.05905.pdf>`_
 * 离散软动作评价 :class:`~tianshou.policy.DiscreteSACPolicy` `Discrete Soft Actor-Critic <https://arxiv.org/pdf/1910.07207.pdf>`_
-* 后验采样强化学习 :class:`~tianshou.policy.PSRLPolicy` `Posterior Sampling Reinforcement Learning <https://www.ece.uvic.ca/~bctill/papers/learning/Strens_2000.pdf>`_
 * 模仿学习 :class:`~tianshou.policy.ImitationPolicy` Imitation Learning
+* :class:`~tianshou.policy.DiscreteBCQPolicy` `Discrete Batch-Constrained deep Q-Learning <https://arxiv.org/pdf/1910.01708.pdf>`_
+* 后验采样强化学习 :class:`~tianshou.policy.PSRLPolicy` `Posterior Sampling Reinforcement Learning <https://www.ece.uvic.ca/~bctill/papers/learning/Strens_2000.pdf>`_
 * 优先级经验重放 :class:`~tianshou.data.PrioritizedReplayBuffer` `Prioritized Experience Replay <https://arxiv.org/pdf/1511.05952.pdf>`_
 * 广义优势函数估计器 :meth:`~tianshou.policy.BasePolicy.compute_episodic_return` `Generalized Advantage Estimator <https://arxiv.org/pdf/1506.02438.pdf>`_
 
 天授还有如下特点：
 
-* 实现优雅，使用2000多行代码即完全实现上述功能
+* 实现优雅，使用3000多行代码即完全实现上述功能
+* 目前为止实现效果最好的 `MuJoCo benchmark <https://github.com/thu-ml/tianshou/tree/master/examples/mujoco>`_
 * 支持任意算法的多个环境（同步异步均可的）并行采样，详见 :ref:`parallel_sampling`
 * 支持动作网络和价值网络使用循环神经网络（RNN）来实现，详见 :ref:`rnn_training`
 * 支持自定义环境，包括任意类型的观测值和动作值（比如一个字典、一个自定义的类），详见 :ref:`self_defined_env`
@@ -76,6 +81,7 @@
    slide
    tutorials
    concepts
+   benchmark
    cheatsheet
 
 .. toctree::

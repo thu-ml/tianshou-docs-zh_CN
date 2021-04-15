@@ -105,8 +105,8 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 采集器（Collector）是天授中的一个关键概念。它定义了策略与不同环境交互的逻辑。在每一回合（step）中，采集器会让策略与环境交互指定数目（至少）的步数或者轮数，并且会将产生的数据存储在重放缓冲区中。
 ::
 
-    train_collector = ts.data.Collector(policy, train_envs, ts.data.ReplayBuffer(size=20000))
-    test_collector = ts.data.Collector(policy, test_envs)
+    train_collector = ts.data.Collector(policy, train_envs, ts.data.VectorReplayBuffer(20000, 10), exploration_noise=True)
+    test_collector = ts.data.Collector(policy, test_envs, exploration_noise=True)
 
 
 使用训练器训练策略
@@ -118,32 +118,33 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 
     result = ts.trainer.offpolicy_trainer(
         policy, train_collector, test_collector,
-        max_epoch=10, step_per_epoch=1000, collect_per_step=10,
-        episode_per_test=100, batch_size=64,
+        max_epoch=10, step_per_epoch=10000, step_per_collect=10,
+        update_per_step=0.1, episode_per_test=100, batch_size=64,
         train_fn=lambda epoch, env_step: policy.set_eps(0.1),
         test_fn=lambda epoch, env_step: policy.set_eps(0.05),
-        stop_fn=lambda mean_rewards: mean_rewards >= env.spec.reward_threshold,
-        writer=None)
+        stop_fn=lambda mean_rewards: mean_rewards >= env.spec.reward_threshold)
     print(f'Finished training! Use {result["duration"]}')
 
 每个参数的具体含义如下：
 
 * ``max_epoch``：最大允许的训练轮数，有可能没训练完这么多轮就会停止（因为满足了 ``stop_fn`` 的条件）
 * ``step_per_epoch``：每个epoch要更新多少次策略网络
-* ``collect_per_step``：每次更新前要收集多少帧与环境的交互数据。上面的代码参数意思是，每收集10帧进行一次网络更新
+* ``step_per_collect``：每次更新前要收集多少帧与环境的交互数据。上面的代码参数意思是，每收集10帧进行一次网络更新
 * ``episode_per_test``：每次测试的时候花几个rollout进行测试
 * ``batch_size``：每次策略计算的时候批量处理多少数据
 * ``train_fn``：在每个epoch训练之前被调用的函数，输入的是当前第几轮epoch和当前用于训练的env一共step了多少次。上面的代码意味着，在每次训练前将epsilon设置成0.1
 * ``test_fn``：在每个epoch测试之前被调用的函数，输入的是当前第几轮epoch和当前用于训练的env一共step了多少次。上面的代码意味着，在每次测试前将epsilon设置成0.05
 * ``stop_fn``：停止条件，输入是当前平均总奖励回报（the average undiscounted returns），返回是否要停止训练
-* ``writer``：天授支持 `TensorBoard <https://www.tensorflow.org/tensorboard>`_，可以像下面这样初始化：
+* ``logger``：天授支持 `TensorBoard <https://www.tensorflow.org/tensorboard>`_，可以像下面这样初始化：
 
 ::
 
     from torch.utils.tensorboard import SummaryWriter
+    from tianshou.utils import BasicLogger
     writer = SummaryWriter('log/dqn')
+    logger = BasicLogger(writer)
 
-把writer送进去，训练器会自动把训练日志记录在里面。
+把logger送进去，训练器会自动把训练日志记录在里面。
 
 训练器返回的结果是个字典，如下所示：
 ::
@@ -182,7 +183,7 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 
     policy.eval()
     policy.set_eps(0.05)
-    collector = ts.data.Collector(policy, env)
+    collector = ts.data.Collector(policy, env, exploration_noise=True)
     collector.collect(n_episode=1, render=1 / 35)
 
 
@@ -195,8 +196,7 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 ::
 
     # 在正式训练前先收集5000帧数据
-    policy.set_eps(1)
-    train_collector.collect(n_step=5000)
+    train_collector.collect(n_step=5000, random=True)
 
     policy.set_eps(0.1)
     for i in range(int(1e6)):  # 训练总数
@@ -204,15 +204,15 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 
         # 如果收集的episode平均总奖励回报超过了阈值，或者每隔1000步，
         # 就会对policy进行测试
-        if collect_result['rew'] >= env.spec.reward_threshold or i % 1000 == 0:
+        if collect_result['rews'].mean() >= env.spec.reward_threshold or i % 1000 == 0:
             policy.set_eps(0.05)
             result = test_collector.collect(n_episode=100)
-            if result['rew'] >= env.spec.reward_threshold:
-                print(f'Finished training! Test mean returns: {result["rew"]}')
+            if result['rews'].mean() >= env.spec.reward_threshold:
+                print(f'Finished training! Test mean returns: {result["rews"].mean()}')
                 break
             else:
                 # 重新设置eps为0.1，表示训练策略
                 policy.set_eps(0.1)
 
         # 使用采样出的数据组进行策略训练
-        losses = policy.learn(train_collector.sample(batch_size=64))
+        losses = policy.update(64, train_collector.buffer)
