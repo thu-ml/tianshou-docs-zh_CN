@@ -8,6 +8,16 @@ Mujoco Benchmark
 
 看这里：https://github.com/thu-ml/tianshou/tree/master/examples/mujoco
 
+.. raw:: html
+
+    <center>
+        <select id="env-mujoco" onchange="showEnv(this)"></select>
+        <br>
+        <div id="vis-mujoco"></div>
+        <br>
+    </center>
+
+
 Atari Benchmark
 ---------------
 
