@@ -87,7 +87,7 @@
         policy, train_collector, test_collector, max_epoch=epoch,
         step_per_epoch=step_per_epoch, step_per_collect=step_per_collect,
         update_per_step=1 / step_per_collect, episode_per_test=test_num,
-        batch_size=batch_size, logger=ts.utils.BasicLogger(writer),
+        batch_size=batch_size, logger=ts.utils.TensorboardLogger(writer),
         train_fn=lambda epoch, env_step: policy.set_eps(0.1),
         test_fn=lambda epoch, env_step: policy.set_eps(0.05),
         stop_fn=lambda mean_rewards: mean_rewards >= env.spec.reward_threshold)

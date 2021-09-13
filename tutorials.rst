@@ -140,9 +140,9 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
 ::
 
     from torch.utils.tensorboard import SummaryWriter
-    from tianshou.utils import BasicLogger
+    from tianshou.utils import TensorboardLogger
     writer = SummaryWriter('log/dqn')
-    logger = BasicLogger(writer)
+    logger = TensorboardLogger(writer)
 
 把logger送进去，训练器会自动把训练日志记录在里面。
 
