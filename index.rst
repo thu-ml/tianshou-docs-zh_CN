@@ -62,7 +62,7 @@
 
 .. code-block:: bash
 
-    $ conda -c conda-forge install tianshou
+    $ conda install -c conda-forge tianshou
 
 还可以直接从GitHub源代码最新版本进行安装：
 
