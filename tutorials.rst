@@ -4,7 +4,7 @@ Deep Q Network
 深度强化学习在很多应用场景中表现惊艳，比如DQN :cite:`dqn` 就是一个很好的例子，在Atari游戏中一鸣惊人。在本教程中，我们会逐步展示如何在Cartpole任务上使用天授训练一个DQN智能体。
 完整的代码位于 `test/discrete/test_dqn.py <https://github.com/thu-ml/tianshou/blob/master/test/discrete/test_dqn.py>`_。
 
-与现有深度强化学习平台（比如 `RLlib <https://github.com/ray-project/ray/tree/master/rllib/>`_）不同，它们将超参数、网络结构等弄成一个config.yaml。天授从代码层面上提供了一个简洁的搭建方式。
+与现有深度强化学习平台（比如 `RLlib <https://github.com/ray-project/ray/tree/master/rllib/>`_）不同，它们将超参数、网络结构等内容整合成一个config.yaml。天授从代码层面上提供了一个简洁的搭建方式。
 
 
 创建环境
@@ -18,7 +18,7 @@ Deep Q Network
 
     env = gym.make('CartPole-v0')
 
-CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决这种任务。在使用不同种类的强化学习算法前，您需要了解每个算法是否能够应用在离散动作空间场景 / 连续动作空间场景中，比如像DDPG :cite:`ddpg` 就只能用在连续动作空间任务中，其他基于策略梯度的算法可以用在任意这两个场景中。
+CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决这种任务。在使用不同种类的强化学习算法前，您需要了解每个算法是否能够应用在离散动作空间场景 / 连续动作空间场景中，例如DDPG :cite:`ddpg` 就只能用在连续动作空间任务中，其他基于策略梯度的算法可以用在任意这两个场景中。
 
 
 并行环境装饰器
@@ -36,7 +36,7 @@ CartPole-v0是一个很简单的离散动作空间场景，DQN也是为了解决
     train_envs = ts.env.DummyVectorEnv([lambda: gym.make('CartPole-v0') for _ in range(8)])
     test_envs = ts.env.DummyVectorEnv([lambda: gym.make('CartPole-v0') for _ in range(100)])
 
-此处在 ``train_envs`` 建立了8个环境，在 ``test_envs`` 建立了100个环境。接下来为了展示需要，使用后面那块代码。
+此处在 ``train_envs`` 建立了8个环境，在 ``test_envs`` 建立了100个环境。接下来为了展示需要，使用第二个代码块。
 
 
 .. _build_the_network:
